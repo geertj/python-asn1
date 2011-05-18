@@ -1,0 +1,552 @@
+<?xml version="1.0" encoding="utf-8"?>
+<book xmlns="http://docbook.org/ns/docbook"
+  xmlns:xlink="http://www.w3.org/1999/xlink">
+<info>
+  <title>Python-ASN1 reference manual</title>
+  <author><firstname>Geert</firstname> <surname>Jansen</surname> </author>
+  <copyright><year>2007-2008</year> <holder>Geert Jansen</holder> </copyright>
+</info>
+<preface>
+  <title>Foreword</title>
+</preface>
+
+<chapter>
+  <title>Introduction to ASN.1</title>
+
+  <para>
+  ASN.1 is short for <emphasis>Abstract Syntax Notation One</emphasis>
+  <citation>ASN1</citation>. It is a joint ISO/IEC and ITU-T standard  for
+  describing the syntax and encoding of data structures in a platform
+  independent way. The syntax of data structures in ASN.1 is described by a
+  syntax definiton language. This language is used to compose ever more
+  complex data types from a few simple ones such as integer and string. Often
+  you will see this language in other standards that define an application on
+  top of ASN.1 (for example LDAP). It is outside the scope of this
+  introduction to go any deeper into the ASN.1 syntax definition language.
+  </para>
+
+  <para>
+  The encoding of data structures in ASN.1 is defined by so-called
+  <firstterm>encoding rules</firstterm>. Not just one but many encoding rules
+  exist, and occasionally new ones are added. Each of the encoding rules is
+  powerful enough to encode any data type specified by the ASN.1 language.
+  Because of the multiple encoding rules, it also means that is it not enough
+  to know that a piece of data is ASN.1 to decode it: you also need to know
+  the encoding rules with which it was encoded.
+  </para>
+
+  <para>
+  ASN.1 was first conceived in 1984. Some people say it is old, other say it
+  is mature. Fact is that many Internet protocols are built on top of ASN.1.
+  Some of the most important of these protocols are:
+
+  <itemizedlist>
+  <listitem> LDAP (Lightweight Directory Access Protocol) </listitem>
+  <listitem> Kerberos (network authentication protocol) </listitem>
+  <listitem> SNMP (Simple Network Management Protocol) </listitem>
+  <listitem> X.509 (public key infrastructure, known from e.g. SSL
+  certificates) </listitem>
+  </itemizedlist>
+  </para>
+
+  <para>
+  ASN.1 is not the only standard for defining the syntax and encoding of data
+  structures. Other standards are Sun's XDR (External Data Representation,
+  <citation>XDR</citation>), and EBNF (Extended Backus-Naur Form,
+  <citation>EBNF</citation>). XDR is used primarily for
+  ONC-RPC applications such as NFS (the Network File System). EBNF is perhaps
+  the most used standard of them all: HTTP and XML (and thereby all its
+  applications) are specified in EBNF.
+  </para>
+
+  <para>
+  But now back to ASN.1... ASN.1 data types are either primitive data types
+  such as integers and strings, or more complex ones built on them. Whatever
+  the details of the data type, each of them has the following properties.
+
+  <itemizedlist>
+  <listitem>
+  <emphasis>Its number.</emphasis> The number is a numerical identifier that
+  identifies the data type uniquely amongst others in its class. For example,
+  ASN.1 defines that the type <quote>integer</quote> has the number
+  <quote>2</quote>.
+  </listitem>
+  <listitem>
+  <emphasis>Its class.</emphasis> Four classes exist:
+  <emphasis>universal</emphasis>, <emphasis>application</emphasis>,
+  <emphasis>context</emphasis>, <emphasis>private</emphasis>. Each class
+  defines the scope of the data type, i.e. how broad is the type available.
+  Universal types are always available while the other ones are more
+  restricted.  All standard primitive types that are defined by ASN.1 are
+  defined in the universal class.
+  </listitem>
+  <listitem>
+  <emphasis>Its encoding type (or just <quote>type</quote>).</emphasis> Two
+  types exist: <emphasis>primitive</emphasis> and
+  <emphasis>constructed</emphasis>. Primitively types contain just one data
+  value such as a number or a string, while constructed types contain a
+  collection of other primitive and/or constructed types.
+  </listitem>
+  </itemizedlist>
+  The three properties together (number, class, type) are also called the
+  <firstterm>tag</firstterm> of a data type.
+  </para>
+
+  <para>
+  As mentioned above, the encoding of data structures is defined by ASN.1
+  encoding rules. The most well-known encodings rules are:
+  <itemizedlist>
+  <listitem>BER (Basic Encoding Rules) </listitem>
+  <listitem>DER (Distinguished Encoding Rules</listitem>
+  </itemizedlist>
+  We now go into a little more detail on BER and DER because understanding of
+  it helps you to understand the Python-AD API.
+  </para>
+
+  <para>
+  The BER and DER encodings are very similar: BER is a looser format and
+  sometimes allows a single value to be encoded in different ways. The DER is
+  a subset of BER and defines in case multiple encodings are possible which
+  one needs to be used. This means that a BER parser can read DER (because
+  that is just a special form of BER), and a DER generator automatically
+  generates valid BER (because all DER is also BER.)
+  </para>
+
+  <para>
+  Python-ASN1 supports the DER and BER, and none of the other encoding rules.
+  The vast majority of applications use these encoding rules, so at the moment
+  no support for additional encoding rules is planned. When generating ASN.1,
+  Python-AD will output DER, while for parsing it supports BER. This
+  arrangement complies with the practise of being forgiving on input, and
+  strict on output.
+  </para>
+
+  <para>
+  The DER and BER encodings work according the the <firstterm>TLV</firstterm>
+  (Tag, Length, Value) principle. A stream of encoded ASN.1 data consists of a
+  sequence of zero or more (tags, lenght, value) tuples, one after the other.
+  These tuples are also called <firstterm>records</firstterm> in this manual,
+  although this is not a term that is defined in the ASN.1 standard. For each
+  data type, DER and BER define how to encode the tag (which we remember is a
+  combination of its number, class and type), the length (in octets) of the
+  data value, and the data value itself.
+  </para>
+
+  <bibliolist>
+  <biblioentry>
+    <abbrev>ASN1</abbrev>
+    <link xlink:href="http://www.itu.int/ITU-T/studygroups/com17/languages/">
+    ITU-T Study Group 17 - Languages for Telecommunication Systems</link>
+  </biblioentry>
+  <biblioentry>
+    <abbrev>XDR</abbrev>
+    <link xlink:href="http://tools.ietf.org/html/rfc4506">XDR: External
+    Data Representation Standard</link>
+  </biblioentry>
+  <biblioentry>
+    <abbrev>EBNF</abbrev>
+    <link xlink:href="http://standards.iso.org/ittf/PubliclyAvailableStandards/s026153_ISO_IEC_14977_1996(E).zip">
+  ISO/IEC 14977: Information technology -- Syntactic metalanguage -- Extended
+  BNF</link>
+  </biblioentry>
+  </bibliolist>
+</chapter>
+
+<chapter>
+  <title>API reference</title>
+  
+  <section>
+  <title>Overview</title>
+
+  <para>
+  This section provides a general, high-level overview of the API. The API is
+  explained in full detail in the sections that follow.
+  </para>
+
+  <para>
+  The Python-ASN1 API is exposed by a single Python module named
+  <literal>asn1</literal>. The main interface is provided by the following
+  classes:
+
+  <itemizedlist>
+  <listitem><classname>Encoder</classname>: Used to encode ASN.1. </listitem>
+  <listitem><classname>Decoder</classname>: Used to decode ASN.1. </listitem>
+  <listitem><classname>Error</classname>: Exception used to signal errors.
+  </listitem>
+  </itemizedlist>
+  </para>
+
+  <para>
+  The interface names on purpose do not repeat <quote>ASN1</quote> in their
+  names: the encoder is called <literal>Encoder</literal> and not
+  <literal>ASN1Encoder</literal>. The fact that they live in the
+  <literal>asn1</literal> module makes their names already unique. Because of
+  this naming convention, there are two recommended ways to import the module.
+  The first way is to import the module only, and use that to access the
+  interface classes, as is illustrated below:
+
+  <programlisting>
+  import asn1
+
+  # Use asn1.Encoder, etc.
+  </programlisting>
+  </para>
+
+  <para>
+  The second way to use the API is to import the interface classes direclty
+  but add <quote>ASN1</quote> to their names:
+
+  <programlisting>
+  from asn1 import Encoder as ASN1Encoder
+
+  # use ASN1Encoder
+  </programlisting>
+
+  This way the risk of namespace conflicts is minimized.
+  </para>
+
+  </section>
+
+  <section>
+  <title>Type Mapping</title>
+
+  <para>
+  The Python-ASN1 encoder and decoder make a difference between primitive and
+  constructed data types. Primitive data types can be encoded and decoded
+  directly with <methodname>read()</methodname> and
+  <methodname>write()</methodname> methods.  For these types, ASN.1 types are
+  mapped directly to Python types and vice versa, as per the table below:
+
+  <informaltable align="center">
+  <tgroup cols="3">
+  <thead>
+    <row> <entry> ASN.1 Type </entry> <entry> Python type </entry>
+          <entry> Default </entry> </row>
+  </thead>
+  <tbody>
+    <row> <entry> Boolean </entry> <entry> bool or int <footnote><para>
+    Depending on whether the Python version supports the
+    <literal>bool</literal> type </para> </footnote> </entry>
+    <entry>yes/no<footnote><para>If <literal>bool</literal> is available then that
+    is the default type for Boolean, otherwise no default type
+    exists</para></footnote>. </entry> </row>
+    <row> <entry> Integer </entry> <entry> int </entry> <entry>yes</entry>
+    </row>
+    <row> <entry> OctetString </entry> <entry> str </entry> <entry>yes</entry>
+    </row>
+    <row> <entry> Null </entry> <entry> None </entry> <entry>yes</entry>
+    </row>
+    <row> <entry> ObjectIdentifier </entry> <entry> str </entry> <entry>no
+    </entry> </row>
+    <row> <entry> Enumerated </entry> <entry> int </entry> <entry>no </entry>
+    </row>
+  </tbody>
+  </tgroup>
+  </informaltable>
+
+  The column <quote>default</quote> is relevant for encoding only.  Because
+  ASN.1 has more data types than Python, the situation arises that one Python
+  type corresponds to multiple ASN.1 types. In this sitution the to be encoded
+  ASN.1 type cannot be determined from the Python type. The solution
+  implemented in Python-ASN1 is that the most frequently used type will be the
+  implicit default, and if another type is desired than that must be specified
+  explicitly through the API.
+  </para>
+
+  <para>
+  For constructed types, no type mapping is done at all, even for types where
+  such a mapping would be possible such as the ASN.1 type <quote>sequence
+  of</quote> which could be mapped to a Python list. For such types a stack
+  based approach is used instead. In this approach, the user needs to
+  explicitly enter/leave the constructed type using the
+  <methodname>enter()</methodname> and <methodname>leave()</methodname>
+  methods of the encoder and the decoder.
+  </para>
+
+  </section>
+
+  <section>
+  <title>Encoding ASN.1</title>
+
+  <para>
+  Encoding of ASN.1 data is done with the <classname>Encoder</classname> class
+  that is defined in the Python package <literal>asn1</literal>.
+  </para>
+
+  <para>
+  The constructor of <classname>Encoder</classname> takes no arguments.
+  </para>
+
+  <para>
+  The <classname>Encoder</classname> class has the following methods:
+  </para>
+
+  <para>
+  <synopsis>start()</synopsis>
+  The <methodname>start()</methodname> method instructs the encoder to start
+  encoding a new ASN.1 output. This method may be called at any time to
+  reset the encoder, and resets the current output (if any).
+  </para>
+
+  <para>
+  <synopsis>write(value, nr=None, typ=None, cls=None)</synopsis>
+  The <methodname>write()</methodname> method encodes one ASN.1 record and
+  writes it to the output buffer. Normally, <parameter>value</parameter> will
+  be the only parameter to this method. In this case Python-AD will autodetect
+  the correct ASN.1 type from the type of <parameter>value</parameter>, and
+  will output the encoded value based on this type. If the desired ASN.1 type
+  cannot be autodetected or is autodetected wrongly, the
+  <parameter>nr</parameter> parameter can be provided to specify the ASN.1
+  type to be used. The <parameter>typ</parameter> parameter can be used to
+  write constructed types to the output by setting it to indicate the
+  constructed encoding type (see <xref linkend="constants"/>). In this case,
+  <parameter>value</parameter> must already be valid ASN.1 encoded data as a
+  plain Python string. This is not normally how constructed types should be
+  encoded though, see <methodname>enter()</methodname> and
+  <methodname>leave()</methodname> for the recommended way of doing this. The
+  <parameter>cls</parameter> argument can be used to override the class of the
+  value. The default class is the universal class.
+  </para>
+
+  <para>
+  <synopsis>enter(nr, cls=None)</synopsis>
+  The <methodname>enter()</methodname> method starts the construction of a
+  constructed type. The <parameter>nr</parameter> specifies the number of the
+  type. The optional parameter <parameter>cls</parameter> specifies the class
+  of the constructed type. The default class to use is the universal class.
+  </para>
+
+  <para>
+  <synopsis>leave()</synopsis>
+  The <methodname>leave()</methodname> method completes the construction of a
+  constructed type and writes the encoded representation to the output buffer.
+  </para>
+
+  <para>
+  <synopsis>output()</synopsis>
+  The <methodname>output()</methodname> returns the encoded ASN.1 data as
+  a plain Python string. This method can be called multiple times, also during
+  encoding. In the latter case the data that has been encoded so far is
+  returned. It is an error to call this method if the encoder is still
+  constructing a constructed type, i.e. if <methodname>enter()</methodname>
+  has been called more times that <methodname>leave()</methodname>.
+  </para>
+
+  </section>
+
+  <section>
+  <title>Decoding ASN.1</title>
+
+  <para>
+  Decoding of ASN.1 data is done with the <classname>Decoder</classname> class
+  that is defined in the Python package <literal>asn1</literal>.
+  </para>
+
+  <para>
+  The constructor of <classname>Decoder</classname> takes no arguments.
+  </para>
+
+  <para>
+  The <classname>Decoder</classname> class has the following methods:
+  </para>
+
+  <para>
+  <synopsis>start(data)</synopsis>
+  The <methodname>start()</methodname> method instructs the decoder to start
+  decoding the ASN.1 input <parameter>data</parameter>, which must be a passed
+  in as a plain Python string. This method may be called at any time to start
+  a new decoding job. If this method is called while currently decoding
+  another input, that decoding context is discarded.<note>It is not
+  necessary to specify the encoding because the decoder assumes the input is
+  in BER/DER format.</note>
+  </para>
+
+  <para>
+  <synopsis>read()</synopsis>
+  The <methodname>read()</methodname> method decodes one ASN.1 record from the
+  input and returns it as a <literal>(tag, value)</literal> tuple. The tag is
+  a 3-tuple <literal>(nr, type, class)</literal>, while the value is a Python
+  object representing the ASN.1 value. The offset in the input is increased so
+  that the next <methodname>read()</methodname> call will return the next
+  record. In case no more data is available from the input,
+  <literal>None</literal> is returned to signal end-of-file.
+  </para>
+
+  <para>
+  <synopsis>peek()</synopsis>
+  The <methodname>peek()</methodname> returns the tag of the current ASN.1
+  record (i.e. the record that a subsequent <methodname>read()</methodname>
+  call would return) without updating the decoding offset. In case no more
+  data is available from the input, None is returned to signal end-of-file.
+  This method is useful if you don't know whether the next tag will be a
+  primitive or a constructed tag. Depending on the return value of
+  <methodname>peek()</methodname>, you would decide to either issue a
+  <methodname>read()</methodname> in case of a primitive type, or an
+  <methodname>enter()</methodname> in case of a constructed type.  <note>
+  Because this method does not advance the current offset in the input,
+  calling it multiple times in a row will return the same value for all
+  calls.</note>
+  </para>
+
+  <para>
+  <synopsis>eof()</synopsis>
+  This method returns true if all input has been decoded, and false otherwise.
+  </para>
+
+  <para>
+  <synopsis>enter()</synopsis>
+  The <methodname>enter()</methodname> method enters the constructed type that
+  is at the current decoding offset. It is an error to call
+  <methodname>enter()</methodname> if the to be decoded ASN.1 record is not of
+  a constructed type.
+  </para>
+
+  <para>
+  <synopsis>leave()</synopsis>
+  The <methodname>leave()</methodname> method leaves the last constructed type
+  that was <methodname>enter()</methodname>-ed. It is an error to call this
+  method if currently not decoding a constructed type.
+  </para>
+
+  </section>
+
+  <section>
+  <title>Error Handling</title>
+
+  <para>
+  Errors in Python-ASN1 are reported as exceptions. One exception is defined
+  in the <literal>asn1</literal> module: <classname>Error</classname>.  All
+  errors in Python-ASN1 are reported through this exception. This includes
+  encoding errors, decoding errors and usage errors.
+  </para>
+  </section>
+
+  <section xml:id="constants">
+  <title>Constants</title>
+
+  <para>
+  A few constants are defined in the <literal>asn1</literal> module. The
+  constants immediately below correspond to ASN.1 numbers. They can be used as
+  the <parameter>nr</parameter> parameter of the
+  <methodname>Encoder.write()</methodname> method, and are returned as the
+  first part of a <literal>(nr, typ, cls)</literal> tuple as returned by
+  <methodname>Decoder.peek()</methodname> and
+  <methodname>Decoder.read()</methodname>.
+
+  <programlisting>
+  Boolean = 0x01
+  Integer = 0x02
+  OctetString = 0x04
+  Null = 0x05
+  ObjectIdentifier = 0x06
+  Enumerated = 0x0a
+  Sequence = 0x10
+  Set = 0x11
+  </programlisting>
+  </para>
+
+  <para>
+  The following constants define the two available encoding types (primitive
+  and constructed) for ASN.1 data types. As above they can be used with the
+  <methodname>Encoder.write()</methodname> and are returned by
+  <methodname>Decoder.peek()</methodname> and
+  <methodname>Decoder.read()</methodname>.
+
+  <programlisting>
+  TypeConstructed = 0x20
+  TypePrimitive = 0x00
+  </programlisting>
+  </para>
+
+  <para>
+  Finally the constants below define the different ASN.1 classes.  As above
+  they can be used with the <methodname>Encoder.write()</methodname> and are
+  returned by <methodname>Decoder.peek()</methodname> and
+  <methodname>Decoder.read()</methodname>.
+
+  <programlisting>
+  ClassUniversal = 0x00
+  ClassApplication = 0x40
+  ClassContext = 0x80
+  ClassPrivate = 0xc0
+  </programlisting>
+  </para>
+
+  </section>
+
+</chapter>
+
+<appendix>
+  <title>Credits</title>
+
+  <para>
+  The following projects have provided inspiration for Python-ASN1:
+  <itemizedlist>
+  <listitem>
+  <citation>pyasn1</citation> This is another ASN1
+  encoder/decoder for Python. By studying its source code I got a better
+  understanding of how ASN.1 works.
+  </listitem>
+  <listitem>
+  <citation>Samba</citation> I got the idea to use a stack based approach for
+  building constructed types from libads, which is distributed as part of
+  Samba.
+  </listitem>
+
+  </itemizedlist>
+  </para>
+
+  <para> References: </para>
+
+  <bibliolist>
+  <biblioentry>
+  <abbrev>pyasn1</abbrev>
+  <link xlink:href="http://pyasn1.sourceforge.net/">ASN.1 tools for
+  Python</link>
+  </biblioentry>
+  <biblioentry>
+  <abbrev>Samba</abbrev>
+  <link xlink:href="http://www.samba.org/">The Samba project</link>
+  </biblioentry>
+  </bibliolist>
+
+</appendix>
+
+<appendix>
+  <title>License</title>
+
+  <para>
+  The Python-ASN1 software is goverend by the following license (the "MIT"
+  license):
+  </para>
+
+  <para>
+  Copyright (c) 2007 the Python-ASN1 authors.
+  </para>
+
+  <para>
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+  </para>
+
+  <para>
+  The above copyright notice and this permission notice shall be included in
+  all copies or substantial portions of the Software.
+  </para>
+
+  <para>
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+  FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+  IN THE SOFTWARE.
+  </para>
+</appendix>
+
+</book>

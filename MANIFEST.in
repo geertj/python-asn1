@@ -1,0 +1,3 @@
+include README LICENSE AUTHORS MANIFEST.in
+recursive-include lib *.py
+include setup.py env.py
